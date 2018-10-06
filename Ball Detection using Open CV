@@ -1,0 +1,66 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Sat Oct  6 12:44:17 2018
+
+@author: r17935avinash
+
+#isolate hsv range of ball
+"""
+"""cv2.rectangle(frame,(384,220),(405,240),(123,245,45),4)
+cv2.imshow("frame",frame)
+q=frame[220:240,384:405]
+q=cv2.cvtColor(q,cv2.COLOR_RGB2HSV)
+print(q)"""
+
+import cv2
+import numpy as np
+import matplotlib.pyplot as plt
+import imutils
+greenlow = (40, 25, 40)
+greenup = (80, 255, 255)
+    
+def extract_green(frame):
+    blur=cv2.GaussianBlur(frame,(21,21),0)
+    #convert image to hsv
+    hsv=cv2.cvtColor(blur,cv2.COLOR_RGB2HSV)
+    #isolate green parts
+    hlo=cv2.inRange(hsv,greenlow,greenup)
+    hlo=cv2.dilate(hlo,None,iterations=4)
+    return hlo
+    
+def contour_ext(mask,img):
+    conts = cv2.findContours(mask.copy(), cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
+    #find contour points
+    conts=conts[0] if imutils.is_cv2() else conts[1]
+    center=None
+    if len(conts)>0:
+        c = max(conts, key=cv2.contourArea)
+        ((x, y), radius) = cv2.minEnclosingCircle(c)
+        #find moments by assuming image intensities as weights
+        M = cv2.moments(c)
+        center = (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
+        #print only if radius above certain limit
+        if radius>8:
+            cv2.circle(img, (int(x), int(y)), int(radius),(126,255,60), 2)
+    return img
+
+
+cap=cv2.VideoCapture(0)
+while True:
+    _,frame=cap.read()
+    disp=extract_green(frame)
+    cv2.namedWindow("disp", cv2.WINDOW_NORMAL)
+    cv2.namedWindow("frmae", cv2.WINDOW_NORMAL)
+    frame=contour_ext(disp,frame)
+    dispS = cv2.resize(disp, (700, 540)) 
+    frameS = cv2.resize(frame, (700, 540)) 
+    cv2.imshow('disp',dispS)
+    cv2.imshow('frmae',frameS)
+    
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+    
+cap.release()
+cv2.destroyAllWindows()
+
